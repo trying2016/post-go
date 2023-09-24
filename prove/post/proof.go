@@ -230,3 +230,37 @@ func (v *Verifier) VerifyProof(
 		return fmt.Errorf("unknown error")
 	}
 }
+
+// VerifyVRFNonce ensures the validity of a nonce for a given node.
+// AtxId is the id of the ATX that was selected by the node for its commitment.
+func VerifyVRFNonce(nonce *uint64, m *shared.PostMetadata, labelScrypt shared.ScryptParams) error {
+	if nonce == nil {
+		return errors.New("invalid `nonce` value; expected: non-nil, given: nil")
+	}
+
+	if len(m.NodeId) != 32 {
+		return fmt.Errorf("invalid `nodeId` length; expected: 32, given: %v", len(m.NodeId))
+	}
+
+	if len(m.CommitmentAtxId) != 32 {
+		return fmt.Errorf("invalid `commitmentAtxId` length; expected: 32, given: %v", len(m.CommitmentAtxId))
+	}
+
+	numLabels := uint64(m.NumUnits) * uint64(m.LabelsPerUnit)
+	difficulty := shared.PowDifficulty(numLabels)
+
+	initializer, err := NewInitializer(uint32(cCPUProviderID()), uint32(labelScrypt.N), shared.CommitmentBytes(m.NodeId, m.CommitmentAtxId), difficulty)
+	if err != nil {
+		return err
+	}
+	defer FreeInitializer(initializer)
+
+	_, calcNonce, err := ScryptPositions(initializer, *nonce, *nonce)
+	if err != nil {
+		return err
+	}
+	if calcNonce == nil || *calcNonce != *nonce {
+		return fmt.Errorf("nonce %v is not valid for node %v", *nonce, m.NodeId)
+	}
+	return nil
+}
