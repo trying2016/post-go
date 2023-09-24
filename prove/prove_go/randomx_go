@@ -1,0 +1,53 @@
+// Package post_gpu RandomX
+/**
+ * @Author: trying
+ * @Description: k2 pow
+ * @File:  randomx.go
+ * @Version: 1.0.0
+ * @Date: 2023/9/22 18:21
+ */
+package post_go
+
+import "github.com/trying2016/post-go/randomx"
+
+var singleRandomX *RandomX
+
+func init() {
+	singleRandomX = &RandomX{}
+}
+
+func GetRandomX() *RandomX {
+	return singleRandomX
+}
+
+type RandomX struct {
+	flags        randomx.RandomxFlags
+	dataset      randomx.RandomxDataset
+	cache        randomx.RandomxCache
+	thread       int32
+	affinity     int32
+	affinityStep int32
+}
+
+func (r *RandomX) Init(flags, thread, affinity, affinityStep int32) error {
+	r.flags = randomx.RandomxFlags(flags)
+	r.thread = thread
+	r.affinity = affinity
+	r.affinityStep = affinityStep
+	cache, dataset, err := randomx.InitRandomx(randomx.RandomxFlags(flags))
+	if err != nil {
+		return err
+	}
+	r.dataset = dataset
+	r.cache = cache
+	return nil
+}
+
+func (r *RandomX) Pow(powInput, difficulty []byte) uint64 {
+	return randomx.Prove(r.flags, r.cache, r.dataset, powInput, difficulty, r.thread, r.affinity, r.affinityStep)
+}
+
+func (r *RandomX) Free() {
+	randomx.RandomxReleaseCache(r.cache)
+	randomx.RandomxReleaseDataset(r.dataset)
+}
