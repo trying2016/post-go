@@ -21,6 +21,7 @@ const (
 	metadataName = "postdata_metadata.json"
 	KeyName      = "key.bin"
 	bitsPerLabel = 8 * 16
+	LabelLength  = 16
 )
 
 // FileSizeToNumLabels 文件大小转 NumLabels
