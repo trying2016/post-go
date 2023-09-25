@@ -264,3 +264,24 @@ func VerifyVRFNonce(nonce *uint64, m *shared.PostMetadata, labelScrypt shared.Sc
 	}
 	return nil
 }
+
+// VerifyProof Verify proof data
+func VerifyProof(context *Verifier,
+	proof *shared.Proof,
+	metadata *shared.PostMetadata,
+	challenge,
+	powDifficulty []byte,
+	powCreator []byte,
+) error {
+	params := shared.DefaultLabelParams()
+	return context.VerifyProof(proof,
+		metadata,
+		shared.K1,
+		shared.K2,
+		shared.K3,
+		challenge,
+		powDifficulty,
+		powCreator,
+		TranslateScryptParams(params.N, params.R, params.P))
+
+}
