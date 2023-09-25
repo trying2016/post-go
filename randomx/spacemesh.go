@@ -20,6 +20,9 @@ var (
 	randomxSeed = []byte("spacemesh-randomx-cache-key")
 )
 
+// ProveCallback 代理Prove回调
+type ProveCallback func(input, difficulty []byte) uint64
+
 // 单列模式
 var singleSpacemesh *Spacemesh
 
@@ -39,6 +42,8 @@ type Spacemesh struct {
 	thread       int32
 	affinity     int32
 	affinityStep int32
+	// 代理Prove回调
+	proveCallback ProveCallback
 }
 
 // Init 初始化
@@ -107,5 +112,13 @@ func (s *Spacemesh) GetFlags() RandomxFlags {
 
 // Pow pow
 func (s *Spacemesh) Pow(powInput, difficulty []byte) uint64 {
+	if s.proveCallback != nil {
+		return s.proveCallback(powInput, difficulty)
+	}
 	return Prove(s.flags, s.cache, s.dataset, powInput, difficulty, s.thread, s.affinity, s.affinityStep)
+}
+
+// SetProveCallback 设置代理Prove回调
+func (s *Spacemesh) SetProveCallback(proveCallback ProveCallback) {
+	s.proveCallback = proveCallback
 }
