@@ -72,9 +72,22 @@ type Prove struct {
 func (p *Prove) GenerateProof(dataDir string, challenge []byte, powDifficulty []byte, creatorId []byte) (*shared.Proof, error) {
 	switch p.proofType {
 	case ProofType_Rust:
-		return post.GenerateProof(dataDir, challenge, uint(p.nonces), uint(p.thread), shared.K1, shared.K2, powDifficulty, randomx.GetSpacemesh().GetFlags(), creatorId)
+		return post.GenerateProof(dataDir,
+			challenge,
+			uint(p.nonces),
+			uint(p.thread),
+			shared.K1,
+			shared.K2,
+			powDifficulty,
+			post.PowFlags(randomx.GetSpacemesh().GetFlags()),
+			creatorId)
 	case PowType_Go:
-		return post_go.GenerateProof(dataDir, challenge, uint32(p.nonces), shared.K1, shared.K2, powDifficulty)
+		return post_go.GenerateProof(dataDir,
+			challenge,
+			uint32(p.nonces),
+			shared.K1,
+			shared.K2,
+			powDifficulty)
 	default:
 		return nil, errors.New("unknown proof type")
 	}
