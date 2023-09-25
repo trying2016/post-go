@@ -17,6 +17,14 @@ import (
 	"sync"
 )
 
+const (
+	Error = iota + 1
+	Warn
+	Info
+	Debug
+	Trace
+)
+
 // ProofType proof 类型
 type ProofType int32
 
@@ -35,7 +43,7 @@ func NewProve(proofType ProofType, thread, nonces int32) (*Prove, error) {
 			post.SetRandomxCallback(func(input, difficulty []byte) uint64 {
 				return randomx.GetSpacemesh().Pow(input, difficulty)
 			})
-			post.SetLogCallback(post.Info)
+			//post.SetLogCallback(post.Info)
 		})
 
 		return &Prove{
@@ -70,4 +78,9 @@ func (p *Prove) GenerateProof(dataDir string, challenge []byte, powDifficulty []
 	default:
 		return nil, errors.New("unknown proof type")
 	}
+}
+
+// SetPostLogLevel 设置日志级别
+func SetPostLogLevel(level int32) {
+	post.SetLogCallback(int(level))
 }
