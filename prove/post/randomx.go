@@ -29,6 +29,9 @@ const (
 	RANDOMX_FLAG_ARGON2       = 96
 )
 
+// ProveCallback 代理Prove回调
+type ProveCallback func(input, difficulty []byte) uint64
+
 // 单例
 var singleRandomX *RandomX
 
@@ -48,6 +51,8 @@ type RandomX struct {
 	thread       int32
 	affinity     int32
 	affinityStep int32
+	// 代理Prove回调
+	proveCallback ProveCallback
 }
 
 func NewRandomX(flags, thread, affinity, affinityStep int32) (*RandomX, error) {
@@ -116,6 +121,9 @@ func (r *RandomX) initRandomX() error {
 
 // Pow pow
 func (r *RandomX) Pow(input []byte, difficulty []byte) uint64 {
+	if r.proveCallback != nil {
+		return r.proveCallback(input, difficulty)
+	}
 	pow := CallRandomXProve(uint(r.flags), r.cache, r.dataset, input, difficulty, r.thread, r.affinity, r.affinityStep)
 	return uint64(pow)
 }
@@ -123,4 +131,9 @@ func (r *RandomX) Pow(input []byte, difficulty []byte) uint64 {
 // GetFlags 获取flags
 func (r *RandomX) GetFlags() int32 {
 	return r.flags
+}
+
+// SetProveCallback 设置代理Prove回调
+func (r *RandomX) SetProveCallback(proveCallback ProveCallback) {
+	r.proveCallback = proveCallback
 }
