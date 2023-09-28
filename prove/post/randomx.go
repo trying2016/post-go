@@ -55,19 +55,19 @@ type RandomX struct {
 	proveCallback ProveCallback
 }
 
-func NewRandomX(flags, thread, affinity, affinityStep int32) (*RandomX, error) {
-	r := &RandomX{
-		flags:        flags,
-		thread:       thread,
-		affinity:     affinity,
-		affinityStep: affinityStep,
-	}
+func (r *RandomX) Init(flags, thread, affinity, affinityStep int32) error {
+	r.flags = flags
+	r.thread = thread
+	r.affinity = affinity
+	r.affinityStep = affinityStep
+
 	err := r.initRandomX()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return r, nil
+	return nil
 }
+
 func (r *RandomX) Release() {
 	if r.cache != nil {
 		FreeRandomXCache(r.cache)
