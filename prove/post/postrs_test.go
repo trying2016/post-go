@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"github.com/trying2016/post-go/randomx"
 	"github.com/trying2016/post-go/shared"
 	"math/rand"
@@ -18,10 +17,6 @@ var (
 	MainNetPowDifficulty, _ = hex.DecodeString("00037ec8ec25e6d2c00000000000000000000000000000000000000000000000")
 	TestNetPowDifficulty, _ = hex.DecodeString("0ff37ec8ec25e6d2c00000000000000000000000000000000000000000000000")
 	RandomxSeed             = []byte("spacemesh-randomx-cache-key")
-)
-var (
-	errCacheFailed = errors.New("cache allocation failed")
-	errDataset     = errors.New("dataset allocation failed")
 )
 
 const (
@@ -146,5 +141,43 @@ func TestAesPerformance(t *testing.T) {
 
 	totalCount := int64(loopCount) * (int64(dataSize) / 16)
 	t.Log("Total:", totalCount, "Cost:", costTime, "Speed:", float64(totalCount)/float64(costTime)*1000/1000/1000, "MB/s")
+}
 
+func TestK2Pow(t *testing.T) {
+	flags := GetRecommendedPowFlags()
+	cache := NewRandomXCache(uint(flags))
+	defer FreeRandomXCache(cache)
+	dataset := MallocDataset(uint(flags), cache)
+	datasetItemCount := DatasetItemCount()
+	initThreadCount := runtime.NumCPU()
+	perThread := datasetItemCount / uint64(initThreadCount)
+	remainder := datasetItemCount % uint64(initThreadCount)
+	startItem := uint64(0)
+	var job sync.WaitGroup
+	for i := 0; i < initThreadCount; i++ {
+		job.Add(1)
+		count := perThread
+		if i == initThreadCount-1 {
+			count += remainder
+		}
+		go func(start, itemCount uint64) {
+			InitDataset(dataset, start, itemCount)
+			job.Done()
+		}(startItem, count)
+		startItem += count
+	}
+	job.Wait()
+	
+	//dataset := NewRandomXDataset(uint(flags), cache, 0, 0)
+	defer FreeRandomXDataset(dataset)
+
+	input := []uint8{0, 0, 0, 0, 0, 0, 0, 1, 'h', 'e', 'l', 'l', 'o', '!', '!', '!',
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+	difficulty := []uint8{0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff}
+
+	pow := CallRandomXProve(uint(flags), cache, dataset, input, difficulty, 8, 0, 1)
+
+	t.Logf("Pow: %v", pow)
 }

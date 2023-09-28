@@ -12,7 +12,6 @@ import (
 	"errors"
 	"github.com/trying2016/post-go/prove/post"
 	post_go "github.com/trying2016/post-go/prove/prove_go"
-	"github.com/trying2016/post-go/randomx"
 	"github.com/trying2016/post-go/shared"
 	"sync"
 )
@@ -41,7 +40,7 @@ func NewProve(proofType ProofType, thread, nonces int32) (*Prove, error) {
 	case ProofType_Rust:
 		postLogOnce.Do(func() {
 			post.SetRandomxCallback(func(input, difficulty []byte) uint64 {
-				return randomx.GetSpacemesh().Pow(input, difficulty)
+				return post.GetRandomX().Pow(input, difficulty)
 			})
 			//post.SetLogCallback(post.Info)
 		})
@@ -52,6 +51,9 @@ func NewProve(proofType ProofType, thread, nonces int32) (*Prove, error) {
 			nonces:    nonces,
 		}, nil
 	case PowType_Go:
+		post_go.SetRandomxCallback(func(input, difficulty []byte) uint64 {
+			return post.GetRandomX().Pow(input, difficulty)
+		})
 		return &Prove{
 			proofType: proofType,
 			thread:    thread,
@@ -79,7 +81,7 @@ func (p *Prove) GenerateProof(dataDir string, challenge []byte, powDifficulty []
 			shared.K1,
 			shared.K2,
 			powDifficulty,
-			post.PowFlags(randomx.GetSpacemesh().GetFlags()),
+			post.PowFlags(post.GetRandomX().GetFlags()),
 			creatorId)
 	case PowType_Go:
 		return post_go.GenerateProof(dataDir,

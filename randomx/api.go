@@ -4,8 +4,8 @@ import "C"
 
 //// #cgo linux,amd64 LDFLAGS: -L./ -lrandomx -Wl,-rpath,./
 // #cgo darwin,amd64 LDFLAGS:-L./ -lrandomx_macos -lm -stdlib=libc++ -lstdc++
-// #cgo linux,amd64 LDFLAGS:-L./ -lrandomx_linux -lm -stdlib=libc++ -lstdc++
-// #cgo windows,amd64 LDFLAGS:-L./ -lrandomx_windows
+// #cgo linux,amd64 LDFLAGS:-L./ -lrandomx_linux -lm -lstdc++
+// #cgo windows,amd64 LDFLAGS:-L./ -lrandomx -Wl,-rpath,./
 // #include "randomx.h"
 // #include <stdlib.h>
 import "C"

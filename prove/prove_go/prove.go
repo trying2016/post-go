@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/trying2016/post-go/prove/post"
-	"github.com/trying2016/post-go/randomx"
 	"github.com/trying2016/post-go/shared"
 	"math"
 	"math/big"
@@ -25,6 +24,14 @@ var (
 	// 创建PoST上下文失败
 	errCreatePostContext = errors.New("create post context failed")
 )
+
+type RandomxCallback func(input, difficulty []byte) uint64
+
+var randomxCallback RandomxCallback
+
+func SetRandomxCallback(callback RandomxCallback) {
+	randomxCallback = callback
+}
 
 func provingDifficulty(k1 uint32, numLabels uint64) (uint64, error) {
 	if numLabels <= 0 {
@@ -114,7 +121,7 @@ func NewProver8_56(challenge []byte, nonces []uint32, params *ProvingParams, min
 
 		//hexInput := hex.EncodeToString(powInput)
 		//hexDifficulty := hex.EncodeToString(params.PoWDifficulty[:])
-		pow := randomx.GetSpacemesh().Pow(powInput, params.PoWDifficulty[:])
+		pow := randomxCallback(powInput, params.PoWDifficulty[:])
 		key := NewAesCipherKey(challenge, uint32(group), pow)
 
 		cipher := &Cipher{

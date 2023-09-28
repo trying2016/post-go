@@ -26,6 +26,9 @@ import (
 	"fmt"
 )
 
+type RandomXCache *C.RandomXCache
+type RandomXDataset *C.RandomXDataset
+
 // ErrScryptClosed is returned when calling a method on an already closed Scrypt instance.
 var ErrScryptClosed = errors.New("scrypt has been closed")
 
@@ -208,4 +211,60 @@ func EncryptAesUint(aes *C.Aes, input []byte, output []uint64, batchSize int) {
 // FreeAes void free_aes(struct Aes *aes_ptr);
 func FreeAes(aes *C.Aes) {
 	C.free_aes(aes)
+}
+
+// NewRandomXCache struct RandomXCache *new_randomx_cache(RandomXFlag flags);
+func NewRandomXCache(flags uint) RandomXCache {
+	return RandomXCache(C.new_randomx_cache(C.RandomXFlag(flags)))
+}
+
+// FreeRandomXCache void free_randomx_cache(struct RandomXCache *cache);
+func FreeRandomXCache(cache RandomXCache) {
+	C.free_randomx_cache((*C.RandomXCache)(cache))
+}
+
+// NewRandomXDataset struct RandomXDataset *new_randomx_dataset(RandomXFlag flags, struct RandomXCache *cache);
+func NewRandomXDataset(flags uint, cache RandomXCache, start, count uint64) RandomXDataset {
+	return RandomXDataset(C.new_randomx_dataset(C.RandomXFlag(flags), (*C.RandomXCache)(cache), C.uint64_t(start), C.uint64_t(count)))
+}
+
+// MallocDataset struct RandomXDataset *malloc_dataset(RandomXFlag flags, struct RandomXCache *cache);
+func MallocDataset(flags uint, cache RandomXCache) RandomXDataset {
+	return RandomXDataset(C.malloc_dataset(C.RandomXFlag(flags), (*C.RandomXCache)(cache)))
+}
+
+//InitDataset void init_dataset(struct RandomXDataset *dataset, uintptr_t start, uintptr_t count);
+func InitDataset(dataset RandomXDataset, start, count uint64) {
+	C.init_dataset((*C.RandomXDataset)(dataset), C.uint64_t(start), C.uint64_t(count))
+}
+
+// DatasetItemCount uint64_t dataset_item_count(void);
+func DatasetItemCount() uint64 {
+	return uint64(C.dataset_item_count())
+}
+
+// FreeRandomXDataset void free_randomx_dataset(struct RandomXDataset *dataset);
+func FreeRandomXDataset(dataset RandomXDataset) {
+	C.free_randomx_dataset((*C.RandomXDataset)(dataset))
+}
+
+/*
+CallRandomXProve
+struct RandomXProve *new_randomx_prove(RandomXFlag flags,
+                                       struct RandomXCache *cache,
+                                       struct RandomXDataset *dataset,
+                                       const uint8_t *input_data,
+                                       uintptr_t input_size,
+                                       const uint8_t *difficulty_data,
+                                       uintptr_t difficulty_size,
+                                       int32_t thread,
+                                       int32_t affinity,
+                                       int32_t affinity_step);
+*/
+func CallRandomXProve(flags uint, cache RandomXCache, dataset RandomXDataset, input []byte, difficulty []byte, thread, affinity, affinityStep int32) uint64 {
+	pow := C.call_randomx_prove(C.RandomXFlag(flags), (*C.RandomXCache)(cache), (*C.RandomXDataset)(dataset),
+		(*C.uint8_t)(&input[0]), C.size_t(len(input)),
+		(*C.uint8_t)(&difficulty[0]), C.size_t(len(difficulty)),
+		C.int32_t(thread), C.int32_t(affinity), C.int32_t(affinityStep))
+	return uint64(pow)
 }

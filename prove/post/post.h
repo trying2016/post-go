@@ -71,6 +71,18 @@ typedef enum VerifyResult {
 
 typedef struct Initializer Initializer;
 
+/**
+ * The Cache is used for light verification and Dataset construction.
+ */
+typedef struct RandomXCache RandomXCache;
+
+/**
+ * The Dataset is a read-only memory structure that is used during VM program execution.
+ */
+typedef struct RandomXDataset RandomXDataset;
+
+typedef struct RandomXProve RandomXProve;
+
 typedef struct Verifier Verifier;
 
 typedef struct Provider {
@@ -269,7 +281,7 @@ struct Proof *generate_proof(const char *datadir,
                              uintptr_t threads,
                              RandomXFlag pow_flags,
                              const unsigned char *miner_id,
-                            void* callback);
+                             void *callback);
 
 /**
  * Get the recommended RandomX flags
@@ -306,3 +318,33 @@ void encrypt_aes(struct Aes *aes_ptr,
 struct Aes *create_aes(const uint8_t *key);
 
 void free_aes(struct Aes *aes_ptr);
+
+struct RandomXCache *new_randomx_cache(RandomXFlag flags);
+
+uint64_t dataset_item_count(void);
+
+struct RandomXDataset *new_randomx_dataset(RandomXFlag flags,
+                                           struct RandomXCache *cache,
+                                           uint64_t start,
+                                           uint64_t count);
+
+
+struct RandomXDataset *malloc_dataset(RandomXFlag flags, struct RandomXCache *cache);
+
+void init_dataset(struct RandomXDataset *dataset, uint64_t start, uint64_t count);
+
+void free_randomx_cache(struct RandomXCache *cache);
+
+void free_randomx_dataset(struct RandomXDataset *dataset);
+
+uint64_t call_randomx_prove(RandomXFlag flags,
+                                       struct RandomXCache *cache,
+                                       struct RandomXDataset *dataset,
+                                       const uint8_t *input_data,
+                                       uintptr_t input_size,
+                                       const uint8_t *difficulty_data,
+                                       uintptr_t difficulty_size,
+                                       int32_t thread,
+                                       int32_t affinity,
+                                       int32_t affinity_step);
+
