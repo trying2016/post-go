@@ -8,6 +8,7 @@ import (
 	"github.com/trying2016/post-go/shared"
 	"math"
 	"math/big"
+	"sync"
 )
 
 const (
@@ -99,7 +100,13 @@ type Prover8_56 struct {
 	nonces        uint32
 }
 
+// 加个全局锁，防止randomx并发
+var randomxLock sync.Mutex
+
 func NewProver8_56(challenge []byte, nonces []uint32, params *ProvingParams, minerID []byte) (*Prover8_56, error) {
+	randomxLock.Lock()
+	defer randomxLock.Unlock()
+
 	if nonces[0]%NONCES_PER_AES != 0 {
 		return nil, errors.New("nonces must start at a multiple of 16")
 	}
