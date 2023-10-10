@@ -21,7 +21,7 @@ const (
 	CHUNK_SIZE     = BLOCK_SIZE * AES_BATCH
 	NONCES_PER_AES = 16
 	KEY_SIZE       = 16
-	BUNCH_SIZE     = 1024 * 1024 * 16
+	BUNCH_SIZE     = 1024 * 1024
 )
 
 var (
@@ -89,10 +89,9 @@ func NewProvingParams(metadata *shared.PostMetadata, cfg *Config) (*ProvingParam
 }
 
 type Cipher struct {
-	Aes     *post.Aes
-	GoAes   cipher.Block
-	Pow     uint64
-	tmpData []byte
+	Aes   *post.Aes
+	GoAes cipher.Block
+	Pow   uint64
 }
 
 type Prover8_56 struct {
@@ -139,9 +138,8 @@ func NewProver8_56(challenge []byte, nonces []uint32, params *ProvingParams, min
 		key := NewAesCipherKey(challenge, uint32(group), pow)
 
 		cipher := &Cipher{
-			Aes:     post.NewAes(key),
-			Pow:     pow,
-			tmpData: make([]byte, BUNCH_SIZE),
+			Aes: post.NewAes(key),
+			Pow: pow,
 		}
 
 		// fmt.Println("group key", hex.EncodeToString(key))
@@ -250,21 +248,23 @@ var showTime int64
 func (p *Prover8_56) prove(batch []byte, baseIndex uint64, consume func(uint32, uint64) bool) bool {
 	count := int64(len(batch)) / 16 * int64(len(p.groupCipher))
 	groupCost := int64(0)
+	tmpData := make([]byte, len(batch))
+	var temp [16]byte
 
 	calcGroup := func(i int, cipher *Cipher) {
 		group := uint32(i) + p.startNonce/16
 		t := time.Now().UnixNano()
-		cipher.Aes.Encrypt(batch, cipher.tmpData, len(batch))
+		cipher.Aes.Encrypt(batch, tmpData, len(batch))
 		t = time.Now().UnixNano() - t
 		groupCost += t
-		for offset, msb := range cipher.tmpData {
+		for offset, msb := range tmpData {
 			if msb <= p.DifficultyMSB {
 				if msb == p.DifficultyMSB {
 					// Check LSB
 					nonce := calcNonce(group, uint32(offset), NONCES_PER_AES)
 					labelOffset := offset / int(NONCES_PER_AES) * LABEL_SIZE
 					count++
-					if p.checkLSB(batch[labelOffset:labelOffset+LABEL_SIZE], nonce, uint32(offset), baseIndex, consume) {
+					if p.checkLSB(batch[labelOffset:labelOffset+LABEL_SIZE], temp[:], nonce, uint32(offset), baseIndex, consume) {
 						return
 					}
 				} else {
@@ -281,10 +281,8 @@ func (p *Prover8_56) prove(batch []byte, baseIndex uint64, consume func(uint32, 
 	var job sync.WaitGroup
 	tick := time.Now().UnixMilli()
 	for i, cipher := range p.groupCipher {
-		job.Add(1)
-		go func(index int, c *Cipher) {
+		func(index int, c *Cipher) {
 			calcGroup(index, c)
-			job.Done()
 		}(i, cipher)
 	}
 	job.Wait()
@@ -317,8 +315,7 @@ func (p *Prover8_56) prove(batch []byte, baseIndex uint64, consume func(uint32, 
 */
 //var temp [16]byte
 
-func (p *Prover8_56) checkLSB(label []byte, nonce, offset uint32, baseIndex uint64, consume func(uint32, uint64) bool) bool {
-	var temp [16]byte
+func (p *Prover8_56) checkLSB(label, temp []byte, nonce, offset uint32, baseIndex uint64, consume func(uint32, uint64) bool) bool {
 
 	lazy := p.nonceCipher[nonce%p.nonces]
 	lazy.GoAes.Encrypt(temp[:], label)

@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-func GenerateProof(dataDir string, challenge []byte, nonces, K1, K2 uint32, powDifficulty []byte) (*shared.Proof, error) {
+func GenerateProof(dataDir string, challenge []byte, nonces, K1, K2 uint32, powDifficulty []byte, thread int32) (*shared.Proof, error) {
 	metadata, err := shared.ReadMetadata(dataDir)
 	if err != nil {
 		return nil, fmt.Errorf("loading metadata: %w", err)
@@ -69,9 +69,9 @@ func GenerateProof(dataDir string, challenge []byte, nonces, K1, K2 uint32, powD
 
 		var job sync.WaitGroup
 		var lock sync.RWMutex
-		job.Add(1)
-		ch := make(chan *Batch, 32)
-		go func() {
+
+		ch := make(chan *Batch, 128)
+		proof := func() {
 			defer func() {
 				job.Done()
 				fmt.Println("proof exit")
@@ -88,7 +88,9 @@ func GenerateProof(dataDir string, challenge []byte, nonces, K1, K2 uint32, powD
 					prove.prove(batch.Data, batch.Pos/LABEL_SIZE, func(nonce uint32, index uint64) bool {
 						lock.Lock()
 						defer lock.Unlock()
-
+						if len(indexes[nonce]) >= int(K2) {
+							return true
+						}
 						indexes[nonce] = append(indexes[nonce], index)
 						if len(indexes[nonce]) >= int(K2) {
 							foundNonce = int64(nonce)
@@ -101,7 +103,12 @@ func GenerateProof(dataDir string, challenge []byte, nonces, K1, K2 uint32, powD
 					})
 				}
 			}
-		}()
+		}
+
+		for i := int32(0); i < thread; i++ {
+			job.Add(1)
+			go proof()
+		}
 
 		err = ReadData(dataDir, BUNCH_SIZE, metadata.MaxFileSize, func(batch *Batch) bool {
 			select {
@@ -111,17 +118,6 @@ func GenerateProof(dataDir string, challenge []byte, nonces, K1, K2 uint32, powD
 			case ch <- batch:
 				return true
 			}
-			//prove.prove(batch.Data, batch.Pos/LABEL_SIZE, func(nonce uint32, index uint64) bool {
-			//	indexes[nonce] = append(indexes[nonce], index)
-			//	if len(indexes[nonce]) >= int(K2) {
-			//		foundNonce = int64(nonce)
-			//		cancel()
-			//		return true
-			//	}
-			//	return false
-			//})
-			//ch <- batch
-			//proveQueue.Push(batch)
 		})
 
 		if err != nil {

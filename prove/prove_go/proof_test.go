@@ -45,7 +45,7 @@ func TestGenerateProof(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	proof, err := GenerateProof(dir, challenge[:], 256, shared.K1, shared.K2, TestNetPowDifficulty)
+	proof, err := GenerateProof(dir, challenge[:], 256, shared.K1, shared.K2, TestNetPowDifficulty, 8)
 	if err != nil {
 		t.Fatal(err)
 	}

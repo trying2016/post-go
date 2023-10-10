@@ -90,7 +90,8 @@ func (p *Prove) GenerateProof(dataDir string, challenge []byte, powDifficulty []
 			uint32(p.nonces),
 			shared.K1,
 			shared.K2,
-			powDifficulty)
+			powDifficulty,
+			p.thread)
 	default:
 		return nil, errors.New("unknown proof type")
 	}
