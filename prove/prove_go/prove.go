@@ -12,7 +12,6 @@ import (
 	"math/big"
 	"sync"
 	"time"
-	"unsafe"
 )
 
 const (
@@ -305,13 +304,12 @@ func (p *Prover8_56) prove(batch []byte, baseIndex uint64, consume func(uint32, 
 	}
 */
 func (p *Prover8_56) checkLSB(label []byte, nonce, offset uint32, baseIndex uint64, consume func(uint32, uint64) bool) bool {
-	var temp [2]uint64
-	byteSlice := *(*[]byte)(unsafe.Pointer(&temp))
+	var temp [16]byte
 
 	lazy := p.nonceCipher[nonce%p.nonces]
-	lazy.GoAes.Encrypt(byteSlice, label)
+	lazy.GoAes.Encrypt(temp[:], label)
 	//lazy.Aes.EncryptUint(label, temp[:], 16)
-	lsb := temp[0] & 0x00ffffffffffffff
+	lsb := binary.LittleEndian.Uint64(temp[:]) & 0x00ffffffffffffff
 	if lsb < p.DifficultyLSB {
 		index := baseIndex + uint64(offset/uint32(NONCES_PER_AES))
 		return consume(nonce, index)
