@@ -247,10 +247,14 @@ var showTime int64
 // prove 满足consume的调节后，返回true，读盘停止运行
 func (p *Prover8_56) prove(batch []byte, baseIndex uint64, consume func(uint32, uint64) bool) bool {
 	count := int64(len(batch)) / 16 * int64(len(p.groupCipher))
+	groupCost := int64(0)
 	calcGroup := func(i int, cipher *Cipher) {
 		group := uint32(i) + p.startNonce/16
 		tmpOut := make([]byte, len(batch))
+		t := time.Now().UnixNano()
 		cipher.Aes.Encrypt(batch, tmpOut, len(batch))
+		t = time.Now().UnixNano() - t
+		groupCost += t
 		for offset, msb := range tmpOut {
 			if msb <= p.DifficultyMSB {
 				if msb == p.DifficultyMSB {
@@ -280,7 +284,7 @@ func (p *Prover8_56) prove(batch []byte, baseIndex uint64, consume func(uint32, 
 	if time.Now().Unix()-showTime > 10 {
 		showTime = time.Now().Unix()
 		costTime := time.Now().UnixMilli() - tick
-		fmt.Println("cost time:", costTime, " ms count:", count)
+		fmt.Println("cost time:", costTime, " ms count:", count, " group cost:", groupCost/1e6)
 	}
 	return false
 }
