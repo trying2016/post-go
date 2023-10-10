@@ -307,8 +307,10 @@ func (p *Prover8_56) prove(batch []byte, baseIndex uint64, consume func(uint32, 
 	    }
 	}
 */
+var temp [16]byte
+
 func (p *Prover8_56) checkLSB(label []byte, nonce, offset uint32, baseIndex uint64, consume func(uint32, uint64) bool) bool {
-	var temp [16]byte
+	//var temp [16]byte
 
 	lazy := p.nonceCipher[nonce%p.nonces]
 	lazy.GoAes.Encrypt(temp[:], label)
