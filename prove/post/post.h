@@ -281,7 +281,8 @@ struct Proof *generate_proof(const char *datadir,
                              uintptr_t threads,
                              RandomXFlag pow_flags,
                              const unsigned char *miner_id,
-                             void *callback);
+                             void *callback,
+                             int32_t thread_id);
 
 /**
  * Get the recommended RandomX flags

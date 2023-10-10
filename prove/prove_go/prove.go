@@ -114,6 +114,8 @@ func NewProver8_56(challenge []byte, nonces []uint32, params *ProvingParams, min
 		return nil, errors.New("nonces must be a multiple of 16")
 	}
 
+	fmt.Println("calc nonces %v...%v", nonces[0], nonces[len(nonces)-1])
+
 	nonceGroup := nonceGroupRange(nonces, NONCES_PER_AES)
 	gropuKeys := make([]byte, KEY_SIZE*len(nonceGroup))
 	noncesKeys := make([]byte, KEY_SIZE*len(nonces))

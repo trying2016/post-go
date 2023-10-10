@@ -99,7 +99,7 @@ func TestProof(t *testing.T) {
 
 	challenge := sha256.Sum256([]byte("1"))
 
-	proof, err := GenerateProof(dir, challenge[:], 16, 16, K1, K2, TestNetPowDifficulty, GetRecommendedPowFlags(), metadata.NodeId)
+	proof, err := GenerateProof(dir, challenge[:], 16, 16, K1, K2, TestNetPowDifficulty, GetRecommendedPowFlags(), metadata.NodeId, -1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +167,7 @@ func TestK2Pow(t *testing.T) {
 		startItem += count
 	}
 	job.Wait()
-	
+
 	//dataset := NewRandomXDataset(uint(flags), cache, 0, 0)
 	defer FreeRandomXDataset(dataset)
 
