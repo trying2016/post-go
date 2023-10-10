@@ -77,7 +77,7 @@ func GenerateProof(dataDir string, challenge []byte, nonces, threads uint, K1, K
 		powFlags,
 		(*C.uchar)(powCreatorId),
 		C.randomXPow,
-		C.int32(threadId),
+		C.int32_t(threadId),
 	)
 
 	if cProof == nil {
