@@ -236,6 +236,7 @@ var showTime int64
 
 // prove 满足consume的调节后，返回true，读盘停止运行
 func (p *Prover8_56) prove(batch []byte, baseIndex uint64, consume func(uint32, uint64) bool) bool {
+	count := int64(len(batch)) / 16 * int64(len(p.groupCipher))
 	calcGroup := func(i int, cipher *Cipher) {
 		group := uint32(i) + p.startNonce/16
 		tmpOut := make([]byte, len(batch))
@@ -246,6 +247,7 @@ func (p *Prover8_56) prove(batch []byte, baseIndex uint64, consume func(uint32, 
 					// Check LSB
 					nonce := calcNonce(group, uint32(offset), NONCES_PER_AES)
 					labelOffset := offset / int(NONCES_PER_AES) * LABEL_SIZE
+					count++
 					if p.checkLSB(batch[labelOffset:labelOffset+LABEL_SIZE], nonce, uint32(offset), baseIndex, consume) {
 						return
 					}
@@ -268,7 +270,7 @@ func (p *Prover8_56) prove(batch []byte, baseIndex uint64, consume func(uint32, 
 	if time.Now().Unix()-showTime > 10 {
 		showTime = time.Now().Unix()
 		costTime := time.Now().UnixMilli() - tick
-		fmt.Println("cost time", costTime)
+		fmt.Println("cost time:", costTime, " ms count:", count)
 	}
 	return false
 }
