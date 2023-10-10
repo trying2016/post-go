@@ -1,6 +1,7 @@
 package post_go
 
 import (
+	"github.com/ncw/directio"
 	"io/ioutil"
 	"log"
 	"os"
@@ -23,7 +24,7 @@ type BatchingReader struct {
 	pos         uint64
 	batchSize   int
 	totalSize   uint64
-	tempData    []byte
+	//tempData    []byte
 }
 
 func NewBatchingReader(reader *os.File, pos uint64, batchSize int, totalSize uint64) *BatchingReader {
@@ -33,7 +34,7 @@ func NewBatchingReader(reader *os.File, pos uint64, batchSize int, totalSize uin
 		pos:         pos,
 		batchSize:   batchSize,
 		totalSize:   totalSize,
-		tempData:    make([]byte, batchSize),
+		//tempData:    make([]byte, batchSize),
 	}
 }
 
@@ -47,8 +48,8 @@ func (r *BatchingReader) Next() (*Batch, error) {
 	if batchSize > int(remaining) {
 		batchSize = int(remaining)
 	}
-	//data := make([]byte, batchSize)
-	n, err := r.reader.Read(r.tempData[:batchSize])
+	data := make([]byte, batchSize)
+	n, err := r.reader.Read(data)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +57,7 @@ func (r *BatchingReader) Next() (*Batch, error) {
 		return nil, nil
 	}
 	batch := &Batch{
-		Data: r.tempData[:n],
+		Data: data,
 		Pos:  r.pos,
 	}
 	r.pos += uint64(n)
@@ -92,7 +93,8 @@ func ReadData(datadir string, batchSize int, fileSize uint64, fn ReadBatch) erro
 	var readers []*BatchingReader
 	for id, entry := range dirEntries {
 		pos := uint64(id) * fileSize
-		file, err := os.Open(path.Join(datadir, entry.Name()))
+		file, err := directio.OpenFile(path.Join(datadir, entry.Name()), os.O_RDONLY, 0666)
+		//file, err := os.Open(path.Join(datadir, entry.Name()))
 		if err != nil {
 			return err
 		}
@@ -128,6 +130,9 @@ func ReadData(datadir string, batchSize int, fileSize uint64, fn ReadBatch) erro
 			}
 		}
 	}
+
+	// 发送结束标记
+	fn(nil)
 	return nil
 }
 

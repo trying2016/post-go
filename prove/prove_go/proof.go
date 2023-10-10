@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/trying2016/post-go/shared"
 	"sort"
+	"sync"
 )
 
 func GenerateProof(dataDir string, challenge []byte, nonces, K1, K2 uint32, powDifficulty []byte) (*shared.Proof, error) {
@@ -66,34 +67,69 @@ func GenerateProof(dataDir string, challenge []byte, nonces, K1, K2 uint32, powD
 		//
 		//})
 
+		var job sync.WaitGroup
+		var lock sync.RWMutex
+		job.Add(1)
+		ch := make(chan *Batch, 4)
+		go func() {
+			defer func() {
+				job.Done()
+				fmt.Println("proof exit")
+			}()
+			for {
+				select {
+				case <-ctx.Done():
+					fmt.Println("proof done")
+					return
+				case batch := <-ch:
+					if batch == nil {
+						return
+					}
+					prove.prove(batch.Data, batch.Pos/LABEL_SIZE, func(nonce uint32, index uint64) bool {
+						lock.Lock()
+						defer lock.Unlock()
+
+						indexes[nonce] = append(indexes[nonce], index)
+						if len(indexes[nonce]) >= int(K2) {
+							foundNonce = int64(nonce)
+							cancel()
+							fmt.Println("found nonces", foundNonce)
+							return true
+						}
+
+						return false
+					})
+				}
+			}
+		}()
+
 		err = ReadData(dataDir, BUNCH_SIZE, metadata.MaxFileSize, func(batch *Batch) bool {
 			select {
 			case <-ctx.Done():
+				fmt.Println("read exit")
 				return false
-			default:
+			case ch <- batch:
+				return true
 			}
-			prove.prove(batch.Data, batch.Pos/LABEL_SIZE, func(nonce uint32, index uint64) bool {
-				indexes[nonce] = append(indexes[nonce], index)
-				if len(indexes[nonce]) >= int(K2) {
-					foundNonce = int64(nonce)
-					cancel()
-					return true
-				}
-				return false
-			})
+			//prove.prove(batch.Data, batch.Pos/LABEL_SIZE, func(nonce uint32, index uint64) bool {
+			//	indexes[nonce] = append(indexes[nonce], index)
+			//	if len(indexes[nonce]) >= int(K2) {
+			//		foundNonce = int64(nonce)
+			//		cancel()
+			//		return true
+			//	}
+			//	return false
+			//})
+			//ch <- batch
 			//proveQueue.Push(batch)
-			return true
 		})
 
 		if err != nil {
 			return nil, err
 		}
-
-		//for _, v := range indexes {
-		//	sort.Slice(v, func(i, j int) bool {
-		//		return v[i] < v[j]
-		//	})
-		//}
+		fmt.Println("wait job done")
+		job.Wait()
+		fmt.Println("job done")
 
 		if foundNonce != -1 {
 			list := indexes[uint32(foundNonce)]

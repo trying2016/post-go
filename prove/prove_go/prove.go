@@ -114,7 +114,7 @@ func NewProver8_56(challenge []byte, nonces []uint32, params *ProvingParams, min
 		return nil, errors.New("nonces must be a multiple of 16")
 	}
 
-	fmt.Println("calc nonces %v...%v", nonces[0], nonces[len(nonces)-1])
+	fmt.Printf("calc nonces %v...%v \n", nonces[0], nonces[len(nonces)-1])
 
 	nonceGroup := nonceGroupRange(nonces, NONCES_PER_AES)
 	gropuKeys := make([]byte, KEY_SIZE*len(nonceGroup))
@@ -232,29 +232,39 @@ fn prove<F>(&self, batch: &[u8], mut index: u64, mut consume: F) -> Option<(u32,
 */
 // prove 满足consume的调节后，返回true，读盘停止运行
 func (p *Prover8_56) prove(batch []byte, baseIndex uint64, consume func(uint32, uint64) bool) bool {
-	for i, cipher := range p.groupCipher {
+	var job sync.WaitGroup
+
+	calcGroup := func(i int, cipher *Cipher) {
+		defer job.Done()
 		group := uint32(i) + p.startNonce/16
-		cipher.Aes.Encrypt(batch, p.tmpOut, len(batch))
-		for offset, msb := range p.tmpOut {
+		tmpOut := make([]byte, len(batch))
+		cipher.Aes.Encrypt(batch, tmpOut, len(batch))
+		for offset, msb := range tmpOut {
 			if msb <= p.DifficultyMSB {
 				if msb == p.DifficultyMSB {
 					// Check LSB
 					nonce := calcNonce(group, uint32(offset), NONCES_PER_AES)
 					labelOffset := offset / int(NONCES_PER_AES) * LABEL_SIZE
 					if p.checkLSB(batch[labelOffset:labelOffset+LABEL_SIZE], nonce, uint32(offset), baseIndex, consume) {
-						return true
+						return
 					}
 				} else {
 					// valid label
 					index := baseIndex + uint64(offset/int(NONCES_PER_AES))
 					nonce := calcNonce(group, uint32(offset), NONCES_PER_AES)
 					if consume(nonce, index) {
-						return true
+						return
 					}
 				}
 			}
 		}
 	}
+
+	for i, cipher := range p.groupCipher {
+		job.Add(1)
+		go calcGroup(i, cipher)
+	}
+	job.Wait()
 	return false
 }
 
