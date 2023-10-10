@@ -1,6 +1,8 @@
 package post_go
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -10,6 +12,7 @@ import (
 	"math/big"
 	"sync"
 	"time"
+	"unsafe"
 )
 
 const (
@@ -87,8 +90,9 @@ func NewProvingParams(metadata *shared.PostMetadata, cfg *Config) (*ProvingParam
 }
 
 type Cipher struct {
-	Aes *post.Aes
-	Pow uint64
+	Aes   *post.Aes
+	GoAes cipher.Block
+	Pow   uint64
 }
 
 type Prover8_56 struct {
@@ -143,15 +147,22 @@ func NewProver8_56(challenge []byte, nonces []uint32, params *ProvingParams, min
 		copy(gropuKeys[i*KEY_SIZE:], key)
 		groupCipherList = append(groupCipherList, cipher)
 	}
+
 	start := nonces[0]
 	startGroup := calcNonceGroup(start, NONCES_PER_AES)
 	for i, nonce := range nonces {
 		group := calcNonceGroup(nonce, NONCES_PER_AES)
 		pow := groupCipherList[group-startGroup].Pow
 		key := NewLazyAesCipherKey(challenge, nonce, group, pow)
+
+		goAes, err := aes.NewCipher(key)
+		if err != nil {
+			return nil, err
+		}
 		nonceCipherList = append(nonceCipherList, &Cipher{
-			Aes: post.NewAes(key),
-			Pow: pow,
+			Aes:   post.NewAes(key),
+			Pow:   pow,
+			GoAes: goAes,
 		})
 		copy(noncesKeys[i*KEY_SIZE:], key)
 	}
@@ -295,8 +306,11 @@ func (p *Prover8_56) prove(batch []byte, baseIndex uint64, consume func(uint32, 
 */
 func (p *Prover8_56) checkLSB(label []byte, nonce, offset uint32, baseIndex uint64, consume func(uint32, uint64) bool) bool {
 	var temp [2]uint64
+	byteSlice := *(*[]byte)(unsafe.Pointer(&temp))
+
 	lazy := p.nonceCipher[nonce%p.nonces]
-	lazy.Aes.EncryptUint(label, temp[:], 16)
+	lazy.GoAes.Encrypt(byteSlice, label)
+	//lazy.Aes.EncryptUint(label, temp[:], 16)
 	lsb := temp[0] & 0x00ffffffffffffff
 	if lsb < p.DifficultyLSB {
 		index := baseIndex + uint64(offset/uint32(NONCES_PER_AES))
