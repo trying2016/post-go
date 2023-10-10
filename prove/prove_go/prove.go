@@ -248,9 +248,9 @@ var showTime int64
 func (p *Prover8_56) prove(batch []byte, baseIndex uint64, consume func(uint32, uint64) bool) bool {
 	count := int64(len(batch)) / 16 * int64(len(p.groupCipher))
 	groupCost := int64(0)
+	tmpOut := make([]byte, len(batch))
 	calcGroup := func(i int, cipher *Cipher) {
 		group := uint32(i) + p.startNonce/16
-		tmpOut := make([]byte, len(batch))
 		t := time.Now().UnixNano()
 		cipher.Aes.Encrypt(batch, tmpOut, len(batch))
 		t = time.Now().UnixNano() - t
