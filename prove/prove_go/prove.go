@@ -9,6 +9,7 @@ import (
 	"math"
 	"math/big"
 	"sync"
+	"time"
 )
 
 const (
@@ -230,12 +231,12 @@ fn prove<F>(&self, batch: &[u8], mut index: u64, mut consume: F) -> Option<(u32,
         None
     }
 */
+
+var showTime int64
+
 // prove 满足consume的调节后，返回true，读盘停止运行
 func (p *Prover8_56) prove(batch []byte, baseIndex uint64, consume func(uint32, uint64) bool) bool {
-	var job sync.WaitGroup
-
 	calcGroup := func(i int, cipher *Cipher) {
-		defer job.Done()
 		group := uint32(i) + p.startNonce/16
 		tmpOut := make([]byte, len(batch))
 		cipher.Aes.Encrypt(batch, tmpOut, len(batch))
@@ -259,12 +260,16 @@ func (p *Prover8_56) prove(batch []byte, baseIndex uint64, consume func(uint32, 
 			}
 		}
 	}
-
+	tick := time.Now().UnixMilli()
 	for i, cipher := range p.groupCipher {
-		job.Add(1)
-		go calcGroup(i, cipher)
+		calcGroup(i, cipher)
 	}
-	job.Wait()
+
+	if time.Now().Unix()-showTime > 10 {
+		showTime = time.Now().Unix()
+		costTime := time.Now().UnixMilli() - tick
+		fmt.Println("cost time", costTime)
+	}
 	return false
 }
 

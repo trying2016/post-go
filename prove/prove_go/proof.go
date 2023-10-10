@@ -70,7 +70,7 @@ func GenerateProof(dataDir string, challenge []byte, nonces, K1, K2 uint32, powD
 		var job sync.WaitGroup
 		var lock sync.RWMutex
 		job.Add(1)
-		ch := make(chan *Batch, 4)
+		ch := make(chan *Batch, 32)
 		go func() {
 			defer func() {
 				job.Done()
