@@ -24,7 +24,7 @@ func GenerateProof(dataDir string, challenge []byte, nonces, K1, K2 uint32, powD
 	}
 	// let num_labels = metadata.num_units as u64 * metadata.labels_per_unit
 	numLabels := uint64(metadata.NumUnits) * metadata.LabelsPerUnit
-	fmt.Printf("Generating proof with params: %+v\n", params)
+	fmt.Printf("Generating proof with params: %v \n", params)
 	startNonce := uint32(0)
 
 	// 进行扫盘

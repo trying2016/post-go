@@ -71,7 +71,7 @@ type Prove struct {
 }
 
 // GenerateProof 生成proof
-func (p *Prove) GenerateProof(dataDir string, challenge []byte, powDifficulty []byte, creatorId []byte, threadId int32) (*shared.Proof, error) {
+func (p *Prove) GenerateProof(dataDir string, challenge []byte, powDifficulty []byte, creatorId []byte, affinityStart, affinityStep int32) (*shared.Proof, error) {
 	switch p.proofType {
 	case ProofType_Rust:
 		return post.GenerateProof(dataDir,
@@ -83,7 +83,8 @@ func (p *Prove) GenerateProof(dataDir string, challenge []byte, powDifficulty []
 			powDifficulty,
 			post.PowFlags(post.GetRandomX().GetFlags()),
 			creatorId,
-			threadId)
+			affinityStart,
+			affinityStep)
 	case PowType_Go:
 		return post_go.GenerateProof(dataDir,
 			challenge,

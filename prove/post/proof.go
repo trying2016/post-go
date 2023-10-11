@@ -47,7 +47,7 @@ func WithPowCreator(id []byte) PostOptionFunc {
 	}
 }
 
-func GenerateProof(dataDir string, challenge []byte, nonces, threads uint, K1, K2 uint32, powDifficulty []byte, powFlags PowFlags, creatorId []byte, threadId int32) (*shared.Proof, error) {
+func GenerateProof(dataDir string, challenge []byte, nonces, threads uint, K1, K2 uint32, powDifficulty []byte, powFlags PowFlags, creatorId []byte, affinityStart, affinityStep int32) (*shared.Proof, error) {
 	dataDirPtr := C.CString(dataDir)
 	defer C.free(unsafe.Pointer(dataDirPtr))
 
@@ -77,7 +77,8 @@ func GenerateProof(dataDir string, challenge []byte, nonces, threads uint, K1, K
 		powFlags,
 		(*C.uchar)(powCreatorId),
 		C.randomXPow,
-		C.int32_t(threadId),
+		C.int32_t(affinityStart),
+		C.int32_t(affinityStep),
 	)
 
 	if cProof == nil {
